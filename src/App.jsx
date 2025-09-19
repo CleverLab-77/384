@@ -7,6 +7,28 @@ const WEEKDAYS = ["周一", "周二", "周三", "周四", "周五", "周六", "�
 const heartEmpty = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><path fill='%23aa5a67' fill-opacity='0.3' d='M6 10.5s-4.5-2.5-4.5-6a2.625 2.625 0 0 1 4.5-1.83A2.625 2.625 0 0 1 10.5 4.5c0 3.5-4.5 6-4.5 6z'/></svg>"
 const heartFull = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><path fill='%23DF0000' d='M6 10.5s-4.5-2.5-4.5-6a2.625 2.625 0 0 1 4.5-1.83A2.625 2.625 0 0 1 10.5 4.5c0 3.5-4.5 6-4.5 6z'/></svg>"
 
+// 刮奖券样式组件
+const ScratchCard = ({ isRevealed, content, placeholder = "待触发" }) => {
+  if (isRevealed) {
+    return <span style={{color:'#2C2522'}}>{content}</span>
+  }
+  return (
+    <div style={{
+      backgroundColor: '#F5DEB3',
+      color: '#999999',
+      padding: '6px 20px',
+      borderRadius: '6px',
+      border: '2px solid #8B4513',
+      display: 'inline-block',
+      fontSize: '14px',
+      fontWeight: 'normal',
+      textAlign: 'center',
+      width: '90%',
+      marginRight: '4px'
+    }}>{placeholder}</div>
+  )
+}
+
 // Sebastian images - different for header and chat
 const sebHeaderAvatar = '/Sebastian-header.png'  // 顶部大头像
 const sebChatAvatar = '/Sebastian-chat.png'      // 对话框小头像
@@ -665,32 +687,33 @@ function App() {
         </div>
       </div>
 
-      <div className={`modal ${logOpen?'':'hidden'}`} role="dialog" aria-modal="true">
-        <div className="modalCard">
-          <div className="modalHeader">
-            <h3>好感度变化</h3>
-            <button className="iconBtn" onClick={()=>setLogOpen(false)}>✕</button>
+      <div className={`sheet ${logOpen?'open':''} ${logOpen?'':'hidden'}`} role="dialog" aria-modal="true">
+        <div className="sheetHeader">
+          <div className="sheetTitle">
+            <div className="sheetMainTitle">好感度变化</div>
           </div>
-          <div className="modalContent">
-            {logEntries.filter(e=>e.value!==0).length===0 ? <p>暂无变化</p> : logEntries.filter(e=>e.value!==0).map((e,i)=>(
-              <div key={i} className="log-row" style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'6px 0', borderBottom:'1px solid #1c2833'}}>
-                <div><strong>{e.value>0?`+${e.value}`:e.value}</strong> <span style={{color:'#c7d2de'}}>{e.type}</span></div>
-                <div className="meta" style={{fontSize:'11px', color:'#9fb3c8'}}>{e.date}</div>
-              </div>
-            ))}
-          </div>
+          <button className="iconBtn" onClick={()=>setLogOpen(false)}>✕</button>
+        </div>
+        <div className="giftGrid logGrid">
+          {logEntries.filter(e=>e.value!==0).length===0 ? <p>暂无变化</p> : logEntries.filter(e=>e.value!==0).map((e,i)=>(
+            <div key={i} className="log-row" style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'6px 0', borderBottom:'1px solid rgba(28,40,51,0.3)'}}>
+              <div><strong style={{color:'#DF0000'}}>{e.value>0?`+${e.value}`:e.value}</strong> <span style={{color:'#2C2522', fontWeight:'bold', fontSize:'14px'}}>{e.type}</span></div>
+              <div className="meta" style={{fontSize:'14px', color:'#2C2522'}}>{e.date}</div>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className={`modal ${knowledgeOpen?'':'hidden'}`} role="dialog" aria-modal="true">
-        <div className="modalCard">
-          <div className="modalHeader">
-            <h3>对话触发进度</h3>
-            <button className="iconBtn" onClick={()=>setKnowledgeOpen(false)}>✕</button>
+      <div className={`sheet ${knowledgeOpen?'open':''} ${knowledgeOpen?'':'hidden'}`} role="dialog" aria-modal="true">
+        <div className="sheetHeader">
+          <div className="sheetTitle">
+            <div className="sheetMainTitle">聊天进度</div>
           </div>
-          <div className="modalContent">
+          <button className="iconBtn" onClick={()=>setKnowledgeOpen(false)}>✕</button>
+        </div>
+        <div className="giftGrid logGrid">
             <div style={{padding:'12px 0'}}>
-              <div style={{display:'flex', alignItems:'center', gap:'16px', marginBottom:'20px', padding:'16px', backgroundColor:'#1c2833', borderRadius:'8px'}}>
+              <div style={{display:'flex', alignItems:'center', gap:'16px', marginBottom:'20px', padding:'16px', backgroundColor:'#F5DEB3', borderRadius:'8px'}}>
                 <div className="circular-progress-large">
                   <svg className="progress-ring" width="60" height="60">
                     <circle
@@ -718,133 +741,197 @@ function App() {
                   </svg>
                   <span className="progress-text-large">{knowledgeProgress}%</span>
                 </div>
-                <div>
-                  <div style={{color:'#a0c7ff', fontSize:'18px', fontWeight:'bold'}}>了解程度</div>
-                  <div style={{color:'#c7d2de', fontSize:'14px'}}>已收集 {triggeredCount}/{totalReplies} 种回复</div>
-                  <div style={{width:'200px', height:'8px', backgroundColor:'#1c2833', borderRadius:'4px', marginTop:'8px', overflow:'hidden'}}>
-                    <div style={{
-                      width:`${knowledgeProgress}%`,
-                      height:'100%',
-                      backgroundColor:'#4ade80',
-                      transition:'width 0.3s ease'
-                    }}></div>
-                  </div>
+                <div style={{flex: 1}}>
+                  <div style={{color:'#2C2522', fontSize:'18px', fontWeight:'bold'}}>聊天进度</div>
+                  <div style={{color:'#2C2522', fontSize:'14px'}}>已收集 {triggeredCount}/{totalReplies} 种回复</div>
                 </div>
               </div>
-              <h4 style={{color:'#a0c7ff', marginBottom:'12px'}}>对话回复</h4>
+              <h4 style={{color:'#2C2522', marginBottom:'12px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                <span>对话回复</span>
+                <span style={{fontSize:'14px', fontWeight:'normal', color:'#666666'}}>（{Array.from(triggeredReplies).filter(r => r.includes('first-greeting') || r.includes('regular-greeting') || r.includes('weather-talk') || r.includes('work-talk')).length}/4）</span>
+              </h4>
               <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                   <span style={{color: triggeredReplies.has('first-greeting-1') ? '#4ade80' : '#6b7280'}}>
                     {triggeredReplies.has('first-greeting-1') ? '✓' : '○'}
                   </span>
-                  <span style={{color:'#c7d2de'}}>初次见面第一句："噢。你是刚搬进来的，对吧？"</span>
+                  <ScratchCard 
+                    isRevealed={triggeredReplies.has('first-greeting-1')}
+                    content='初次见面第一句："噢。你是刚搬进来的，对吧？"'
+                  />
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                   <span style={{color: triggeredReplies.has('first-greeting-2') ? '#4ade80' : '#6b7280'}}>
                     {triggeredReplies.has('first-greeting-2') ? '✓' : '○'}
                   </span>
-                  <span style={{color:'#c7d2de'}}>初次见面第二句："好啊。那么多地方你不选，偏偏选中了鹈鹕镇？"</span>
+                  <ScratchCard 
+                    isRevealed={triggeredReplies.has('first-greeting-2')}
+                    content='初次见面第二句："好啊。那么多地方你不选，偏偏选中了鹈鹕镇？"'
+                  />
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                   <span style={{color: triggeredReplies.has('regular-greeting') ? '#4ade80' : '#6b7280'}}>
                     {triggeredReplies.has('regular-greeting') ? '✓' : '○'}
                   </span>
-                  <span style={{color:'#c7d2de'}}>日常打招呼："哦，嗨。今天在忙农场吗？"</span>
+                  <ScratchCard 
+                    isRevealed={triggeredReplies.has('regular-greeting')}
+                    content='日常打招呼："哦，嗨。今天在忙农场吗？"'
+                  />
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                   <span style={{color: triggeredReplies.has('weather-talk') ? '#4ade80' : '#6b7280'}}>
                     {triggeredReplies.has('weather-talk') ? '✓' : '○'}
                   </span>
-                  <span style={{color:'#c7d2de'}}>聊天气："下雨天更有灵感。我喜欢雨声敲窗的感觉。"</span>
+                  <ScratchCard 
+                    isRevealed={triggeredReplies.has('weather-talk')}
+                    content='聊天气："下雨天更有灵感。我喜欢雨声敲窗的感觉。"'
+                  />
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                   <span style={{color: triggeredReplies.has('work-talk') ? '#4ade80' : '#6b7280'}}>
                     {triggeredReplies.has('work-talk') ? '✓' : '○'}
                   </span>
-                  <span style={{color:'#c7d2de'}}>聊项目："我在修个小工具。等它能跑起来再给你看。"</span>
+                  <ScratchCard 
+                    isRevealed={triggeredReplies.has('work-talk')}
+                    content='聊项目："我在修个小工具。等它能跑起来再给你看。"'
+                  />
                 </div>
               </div>
               
-              <h4 style={{color:'#a0c7ff', marginTop:'20px', marginBottom:'12px'}}>礼物回复</h4>
+              <h4 style={{color:'#2C2522', marginTop:'20px', marginBottom:'12px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                <span>礼物回复</span>
+                <span style={{fontSize:'14px', fontWeight:'normal', color:'#666666'}}>（{Array.from(triggeredReplies).filter(r => r.includes('gift-')).length}/10）</span>
+              </h4>
               <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                   <span style={{color: triggeredReplies.has('gift-void-egg') ? '#4ade80' : '#6b7280'}}>
                     {triggeredReplies.has('gift-void-egg') ? '✓' : '○'}
                   </span>
-                  <span style={{color:'#c7d2de'}}>虚空蛋专属回复</span>
+                  <ScratchCard 
+                    isRevealed={triggeredReplies.has('gift-void-egg')}
+                    content='虚空蛋专属回复'
+                  />
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                   <span style={{color: triggeredReplies.has('gift-obsidian') ? '#4ade80' : '#6b7280'}}>
                     {triggeredReplies.has('gift-obsidian') ? '✓' : '○'}
                   </span>
-                  <span style={{color:'#c7d2de'}}>黑曜石专属回复</span>
+                  <ScratchCard 
+                    isRevealed={triggeredReplies.has('gift-obsidian')}
+                    content='黑曜石专属回复'
+                  />
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                   <span style={{color: triggeredReplies.has('gift-pumpkin-soup') ? '#4ade80' : '#6b7280'}}>
                     {triggeredReplies.has('gift-pumpkin-soup') ? '✓' : '○'}
                   </span>
-                  <span style={{color:'#c7d2de'}}>南瓜汤专属回复</span>
+                  <ScratchCard 
+                    isRevealed={triggeredReplies.has('gift-pumpkin-soup')}
+                    content='南瓜汤专属回复'
+                  />
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                   <span style={{color: triggeredReplies.has('gift-sashimi') ? '#4ade80' : '#6b7280'}}>
                     {triggeredReplies.has('gift-sashimi') ? '✓' : '○'}
                   </span>
-                  <span style={{color:'#c7d2de'}}>生鱼片专属回复</span>
+                  <ScratchCard 
+                    isRevealed={triggeredReplies.has('gift-sashimi')}
+                    content='生鱼片专属回复'
+                  />
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                   <span style={{color: triggeredReplies.has('gift-frozen-tear') ? '#4ade80' : '#6b7280'}}>
                     {triggeredReplies.has('gift-frozen-tear') ? '✓' : '○'}
                   </span>
-                  <span style={{color:'#c7d2de'}}>泪晶专属回复</span>
+                  <ScratchCard 
+                    isRevealed={triggeredReplies.has('gift-frozen-tear')}
+                    content='泪晶专属回复'
+                  />
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                   <span style={{color: triggeredReplies.has('gift-frog-egg') ? '#4ade80' : '#6b7280'}}>
                     {triggeredReplies.has('gift-frog-egg') ? '✓' : '○'}
                   </span>
-                  <span style={{color:'#c7d2de'}}>青蛙蛋专属回复</span>
+                  <ScratchCard 
+                    isRevealed={triggeredReplies.has('gift-frog-egg')}
+                    content='青蛙蛋专属回复'
+                  />
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                   <span style={{color: triggeredReplies.has('gift-stardrop-tea') ? '#4ade80' : '#6b7280'}}>
                     {triggeredReplies.has('gift-stardrop-tea') ? '✓' : '○'}
                   </span>
-                  <span style={{color:'#c7d2de'}}>星之果茶专属回复</span>
+                  <ScratchCard 
+                    isRevealed={triggeredReplies.has('gift-stardrop-tea')}
+                    content='星之果茶专属回复'
+                  />
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                   <span style={{color: triggeredReplies.has('gift-favorite-general') ? '#4ade80' : '#6b7280'}}>
                     {triggeredReplies.has('gift-favorite-general') ? '✓' : '○'}
                   </span>
-                  <span style={{color:'#c7d2de'}}>最爱礼物通用回复</span>
+                  <ScratchCard 
+                    isRevealed={triggeredReplies.has('gift-favorite-general')}
+                    content='最爱礼物通用回复'
+                  />
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                   <span style={{color: triggeredReplies.has('gift-like') ? '#4ade80' : '#6b7280'}}>
                     {triggeredReplies.has('gift-like') ? '✓' : '○'}
                   </span>
-                  <span style={{color:'#c7d2de'}}>喜欢礼物回复</span>
+                  <ScratchCard 
+                    isRevealed={triggeredReplies.has('gift-like')}
+                    content='喜欢礼物回复'
+                  />
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                   <span style={{color: triggeredReplies.has('gift-neutral') ? '#4ade80' : '#6b7280'}}>
                     {triggeredReplies.has('gift-neutral') ? '✓' : '○'}
                   </span>
-                  <span style={{color:'#c7d2de'}}>一般礼物回复</span>
+                  <ScratchCard 
+                    isRevealed={triggeredReplies.has('gift-neutral')}
+                    content='一般礼物回复'
+                  />
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                   <span style={{color: triggeredReplies.has('gift-dislike') ? '#4ade80' : '#6b7280'}}>
                     {triggeredReplies.has('gift-dislike') ? '✓' : '○'}
                   </span>
-                  <span style={{color:'#c7d2de'}}>不喜欢礼物回复</span>
+                  <ScratchCard 
+                    isRevealed={triggeredReplies.has('gift-dislike')}
+                    content='不喜欢礼物回复'
+                  />
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
                   <span style={{color: triggeredReplies.has('gift-hate') ? '#4ade80' : '#6b7280'}}>
                     {triggeredReplies.has('gift-hate') ? '✓' : '○'}
                   </span>
-                  <span style={{color:'#c7d2de'}}>讨厌礼物回复</span>
+                  <ScratchCard 
+                    isRevealed={triggeredReplies.has('gift-hate')}
+                    content='讨厌礼物回复'
+                  />
                 </div>
               </div>
             </div>
-          </div>
         </div>
       </div>
       {toast && <div className="toast">{toast}</div>}
+      
+      <footer style={{
+        position: 'fixed',
+        bottom: '0',
+        left: '0',
+        right: '0',
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        color: '#FCEAC7',
+        textAlign: 'center',
+        padding: '8px 16px',
+        fontSize: '12px',
+        zIndex: 1000,
+        borderTop: '1px solid #8B4513'
+      }}>
+        非官方，制作者：小红书@Clever Lab，数据来源：官方wiki
+      </footer>
     </div>
   )
 }
