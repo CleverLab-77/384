@@ -4,8 +4,8 @@ import './App.css'
 const SEASONS = ["春", "夏", "秋", "冬"]
 const WEEKDAYS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 
-const heartEmpty = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><path fill='%23aa5a67' fill-opacity='0.3' d='M8 14s-6-3.33-6-8a3.5 3.5 0 0 1 6-2.44A3.5 3.5 0 0 1 14 6c0 4.67-6 8-6 8z'/></svg>"
-const heartFull = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><path fill='%23DF0000' d='M8 14s-6-3.33-6-8a3.5 3.5 0 0 1 6-2.44A3.5 3.5 0 0 1 14 6c0 4.67-6 8-6 8z'/></svg>"
+const heartEmpty = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><path fill='%23aa5a67' fill-opacity='0.3' d='M6 10.5s-4.5-2.5-4.5-6a2.625 2.625 0 0 1 4.5-1.83A2.625 2.625 0 0 1 10.5 4.5c0 3.5-4.5 6-4.5 6z'/></svg>"
+const heartFull = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><path fill='%23DF0000' d='M6 10.5s-4.5-2.5-4.5-6a2.625 2.625 0 0 1 4.5-1.83A2.625 2.625 0 0 1 10.5 4.5c0 3.5-4.5 6-4.5 6z'/></svg>"
 
 // Sebastian images - different for header and chat
 const sebHeaderAvatar = '/Sebastian-header.png'  // 顶部大头像
@@ -593,8 +593,8 @@ function App() {
               return <img key={i} className={`heart${filled?' filled':''}`} src={filled?heartFull:heartEmpty} alt={filled?'♥':'♡'} />
             })}
           </div>
+          <button className="btn-details-text" onClick={()=>setLogOpen(true)}>详情&gt;</button>
         </div>
-        <button className="btn-details-text" onClick={()=>setLogOpen(true)}>详情&gt;</button>
       </div>
       </header>
 
@@ -605,7 +605,7 @@ function App() {
             return (
               <div key={idx}>
                 <div className={`msg ${m.sender}`}>
-                  <img className="avatar" src={m.sender==='seb'?sebChatAvatar:fallbackMe} onError={(e)=>{e.currentTarget.src=fallbackSeb}} alt={m.sender==='seb'?'Sebastian':'我'} />
+                  {m.sender==='seb' && <img className="avatar" src={sebChatAvatar} onError={(e)=>{e.currentTarget.src=fallbackSeb}} alt="Sebastian" />}
                   <div className="bubble">{m.text}</div>
                 </div>
               </div>
@@ -649,7 +649,10 @@ function App() {
 
       <div className={`sheet ${giftOpen?'open':''} ${giftOpen?'':'hidden'}`} role="dialog" aria-modal="true">
         <div className="sheetHeader">
-          <span>选择礼物（每天最多1个，每周最多2个，星之果茶无限制）</span>
+          <div className="sheetTitle">
+            <div className="sheetMainTitle">选择礼物</div>
+            <div className="sheetSubTitle">每天最多1个，每周最多2个，星之果茶无限制</div>
+          </div>
           <button className="iconBtn" onClick={()=>setGiftOpen(false)}>✕</button>
         </div>
         <div className="giftGrid">
