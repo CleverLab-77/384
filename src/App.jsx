@@ -21,7 +21,7 @@ const allGifts = [
   { id: 'Sashimi', name: '生鱼片', points: 80, category: '最爱' },
   { id: 'VoidEgg', name: '虚空蛋', points: 80, category: '最爱' },
   { id: 'GreenFrogEgg', name: '青蛙蛋', points: 80, category: '最爱' },
-  { id: 'StardropTea', name: '星之果茶', points: 80, category: '最爱' },
+  { id: 'StardropTea', name: '星之果茶', points: 250, category: '最爱' },
   
   // 喜欢 (45分)
   { id: 'CombatQuarterly', name: '战斗季刊', points: 45, category: '喜欢' },
@@ -71,15 +71,17 @@ const allGifts = [
 ]
 
 function getRandomGifts() {
-  // 从每个分类中随机选择一些礼物，总共16个
-  const favorite = allGifts.filter(g => g.category === '最爱')
+  // 从每个分类中随机选择一些礼物，总共16个，其中必包含星之果茶
+  const favorite = allGifts.filter(g => g.category === '最爱' && g.id !== 'StardropTea')
   const like = allGifts.filter(g => g.category === '喜欢')
   const neutral = allGifts.filter(g => g.category === '一般')
   const dislike = allGifts.filter(g => g.category === '不喜欢')
   const hate = allGifts.filter(g => g.category === '讨厌')
+  const stardropTea = allGifts.find(g => g.id === 'StardropTea')
   
   const selected = [
-    ...favorite.sort(() => 0.5 - Math.random()).slice(0, 3), // 最爱3个
+    stardropTea, // 必选星之果茶
+    ...favorite.sort(() => 0.5 - Math.random()).slice(0, 2), // 最爱2个（除了星之果茶）
     ...like.sort(() => 0.5 - Math.random()).slice(0, 3),     // 喜欢3个
     ...neutral.sort(() => 0.5 - Math.random()).slice(0, 5),  // 一般5个
     ...dislike.sort(() => 0.5 - Math.random()).slice(0, 3),  // 不喜欢3个
@@ -118,9 +120,10 @@ function App() {
   ])
   const [giftOpen, setGiftOpen] = useState(false)
   const [logOpen, setLogOpen] = useState(false)
+  const [knowledgeOpen, setKnowledgeOpen] = useState(false)
   const [toast, setToast] = useState(null)
   const [contextOptions, setContextOptions] = useState(null)
-  const [editorOpen, setEditorOpen] = useState(false)
+  const [triggeredReplies, setTriggeredReplies] = useState(new Set())
   const [dialogues, setDialogues] = useState([
     { 
       firstMeet:'否', 
@@ -144,13 +147,14 @@ function App() {
     }
   ])
 
-  // Editor temp form state
-  const [draft, setDraft] = useState({ firstMeet:'否', season:'any', weekday:'any', day:'any', heartsAtLeast:0, location:'any', weather:'sunny', marriage:'any', yearParity:'any', festival:'none', trigger:'hello', npcLine:'', options:[] })
-  const [draftOpt, setDraftOpt] = useState({ label:'', playerText:'', delta:0, sebResponse:'' })
-
   const dateString = useMemo(()=>formatDate({year,seasonIndex,dayOfSeason}),[year,seasonIndex,dayOfSeason])
   const hearts = computeHearts(friendshipPoints)
   const weekNumber = useMemo(()=> Math.floor((dayOfSeason-1)/7)+1, [dayOfSeason])
+  
+  // 计算了解程度进度
+  const totalReplies = 16 // 总回复数量
+  const triggeredCount = triggeredReplies.size
+  const knowledgeProgress = Math.round((triggeredCount / totalReplies) * 100)
 
   function addLog(title, reason, value){
     setLogEntries(prev=>[{date:dateString, type:reason, value, text:title}, ...prev])
@@ -169,6 +173,10 @@ function App() {
     setMessages(prev=>[...prev, {sender, text, date:dateString}])
   }
 
+  function recordTriggeredReply(replyId){
+    setTriggeredReplies(prev => new Set([...prev, replyId]))
+  }
+
   function weekdayIndex(){
     return (dayOfSeason - 1) % 7 // 0=Mon ... 4=Fri
   }
@@ -179,7 +187,7 @@ function App() {
 
   function getOptions(){
     if (contextOptions && contextOptions.length>0) return contextOptions
-    // 如果今天已经打过招呼，不显示打招呼选项
+    // 如果今天已经产生过对话，不显示任何快捷选项
     if (dialogueGainedToday) return []
     return [
       { id:'hello', label:'👋 打招呼', effect:()=>sebReply('hello') }
@@ -253,28 +261,46 @@ function App() {
       // default hello
       if (!greetedOnce){
         appendMessage('me', optionText(topic))
-        appendMessage('seb', '噢。你是刚搬进来的，对吧？')
-        setGreetedOnce(true)
-        // 提供回复选项
-        setContextOptions([
-          { 
-            id: 'yes-nice', 
-            label: '是的，见到你很高兴', 
-            effect: () => {
-              appendMessage('me', '是的，见到你很高兴')
+        // 立即设置对话状态，隐藏快捷选项
+        setDialogueGainedToday(true)
+        
+        // 延迟显示塞巴斯的第一句回复
+        setTimeout(() => {
+          appendMessage('seb', '噢。你是刚搬进来的，对吧？')
+          recordTriggeredReply('first-greeting-1')
+          
+          // 延迟显示玩家的回复
+          setTimeout(() => {
+            appendMessage('me', '是的，见到你很高兴')
+            
+            // 延迟显示塞巴斯的第二句回复
+            setTimeout(() => {
               appendMessage('seb', '好啊。那么多地方你不选，偏偏选中了鹈鹕镇？')
-              appendMessage('me', '…………')
-              if (!dialogueGainedToday){ addFriendship(20, '对话'); setDialogueGainedToday(true) } else { addLog('好感未变','对话',0) }
-              setContextOptions(null)
-            }
-          }
-        ])
+              recordTriggeredReply('first-greeting-2')
+              
+              // 延迟显示玩家的最后回复
+              setTimeout(() => {
+                appendMessage('me', '…………')
+                addFriendship(20, '对话')
+              }, 1500)
+            }, 1500)
+          }, 1000)
+        }, 1000)
+        
+        setGreetedOnce(true)
         return
       }
       reply='哦，嗨。今天在忙农场吗？'
+      recordTriggeredReply('regular-greeting')
     }
-    else if (topic==='weather'){ reply='下雨天更有灵感。我喜欢雨声敲窗的感觉。' }
-    else if (topic==='work'){ reply='我在修个小工具。等它能跑起来再给你看。' }
+    else if (topic==='weather'){ 
+      reply='下雨天更有灵感。我喜欢雨声敲窗的感觉。'
+      recordTriggeredReply('weather-talk')
+    }
+    else if (topic==='work'){ 
+      reply='我在修个小工具。等它能跑起来再给你看。'
+      recordTriggeredReply('work-talk')
+    }
     appendMessage('me', optionText(topic))
     appendMessage('seb', reply)
     if (!dialogueGainedToday){
@@ -287,11 +313,11 @@ function App() {
   }
 
   function canGift(giftId){
-    // 星之果茶不受每日限制
+    // 星之果茶不受每日和每周限制
     if (giftId === 'StardropTea') {
-      return giftsGivenThisWeek < 2
+      return true
     }
-    // 其他礼物每天只能送一个
+    // 其他礼物每天只能送一个，每周最多2个
     return giftsGivenToday < 1 && giftsGivenThisWeek < 2
   }
 
@@ -309,9 +335,9 @@ function App() {
       }
       return 
     }
-    setGiftsGivenThisWeek(x=>x+1)
-    // 星之果茶不受每日限制
+    // 星之果茶不受任何限制
     if (g.id !== 'StardropTea') {
+      setGiftsGivenThisWeek(x=>x+1)
       setGiftsGivenToday(x=>x+1)
     }
     appendMessage('me', `送出礼物：${g.name}`)
@@ -325,29 +351,51 @@ function App() {
         '唔……如果我把它放在枕头下面，能不能孵出小鸡？嘿嘿……试试就知道了。'
       ]
       reaction = voidEggReactions[Math.floor(Math.random() * voidEggReactions.length)]
+      recordTriggeredReply('gift-void-egg')
     } else if (g.id === 'Obsidian') {
       reaction = '这是黑曜石吧？我正好想要一块……我想试试把它削成一把匕首。'
+      recordTriggeredReply('gift-obsidian')
     } else if (g.id === 'PumpkinSoup') {
       reaction = '你给我带了汤？我很喜欢。这让我想起了很多往事……'
+      recordTriggeredReply('gift-pumpkin-soup')
     } else if (g.id === 'Sashimi') {
       const sashimiReactions = [
         '我超喜欢这个，你怎么知道的？',
         '嗯……一旦你习惯了吃生鱼，就会很上瘾。'
       ]
       reaction = sashimiReactions[Math.floor(Math.random() * sashimiReactions.length)]
+      recordTriggeredReply('gift-sashimi')
     } else if (g.id === 'FrozenTear') {
       reaction = '我真的很喜欢这东西。你怎么会知道的？'
+      recordTriggeredReply('gift-frozen-tear')
     } else if (g.id === 'GreenFrogEgg') {
       reaction = '哎，这是青蛙蛋吧！我要试试能不能孵出来，谢谢你！'
+      recordTriggeredReply('gift-frog-egg')
     } else if (g.id === 'StardropTea') {
       reaction = '哎，谢谢你，等天黑了我就喝。'
+      recordTriggeredReply('gift-stardrop-tea')
     } else {
       // 一般回复
-      if (g.category === '最爱') reaction='我真的很喜欢这东西。你怎么会知道的？'
-      else if (g.category === '喜欢') reaction='谢谢，我喜欢这个。'
-      else if (g.category === '一般') reaction='……谢谢。'
-      else if (g.category === '不喜欢') reaction='……？'
-      else if (g.category === '讨厌') reaction='……我讨厌这个。'
+      if (g.category === '最爱') {
+        reaction='我真的很喜欢这东西。你怎么会知道的？'
+        recordTriggeredReply('gift-favorite-general')
+      }
+      else if (g.category === '喜欢') {
+        reaction='谢谢，我喜欢这个。'
+        recordTriggeredReply('gift-like')
+      }
+      else if (g.category === '一般') {
+        reaction='……谢谢。'
+        recordTriggeredReply('gift-neutral')
+      }
+      else if (g.category === '不喜欢') {
+        reaction='……？'
+        recordTriggeredReply('gift-dislike')
+      }
+      else if (g.category === '讨厌') {
+        reaction='……我讨厌这个。'
+        recordTriggeredReply('gift-hate')
+      }
     }
     
     appendMessage('seb', reaction)
@@ -448,21 +496,68 @@ function App() {
     scrollToBottom()
   }, [messages.length])
 
+  // 移动端视口高度处理
+  useEffect(() => {
+    const handleResize = () => {
+      // 设置CSS自定义属性来处理动态视口高度
+      const vh = window.innerHeight * 0.01
+      document.documentElement.style.setProperty('--vh', `${vh}px`)
+    }
+    
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    window.addEventListener('orientationchange', handleResize)
+    
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      window.removeEventListener('orientationchange', handleResize)
+    }
+  }, [])
+
   return (
     <div className="app">
       <header className="topHeader">
       <div>
           <img className="avatarLarge" src={sebHeaderAvatar} alt="Sebastian" onError={e => e.target.src = fallbackSeb} />
+          <button className="knowledge-btn-header" onClick={()=>setKnowledgeOpen(true)}>
+            <div className="circular-progress">
+              <svg className="progress-ring" width="24" height="24">
+                <circle
+                  className="progress-ring-circle-bg"
+                  stroke="#1c2833"
+                  strokeWidth="2"
+                  fill="transparent"
+                  r="10"
+                  cx="12"
+                  cy="12"
+                />
+                <circle
+                  className="progress-ring-circle"
+                  stroke="#4ade80"
+                  strokeWidth="2"
+                  fill="transparent"
+                  r="10"
+                  cx="12"
+                  cy="12"
+                  style={{
+                    strokeDasharray: `${2 * Math.PI * 10}`,
+                    strokeDashoffset: `${2 * Math.PI * 10 * (1 - knowledgeProgress / 100)}`
+                  }}
+                />
+              </svg>
+              <span className="progress-text">{knowledgeProgress}%</span>
+            </div>
+          </button>
         </div>
         <div style={{flex:1}}>
           <div className="nameRow">
             <h1 className="name">塞巴斯提安</h1>
-            <span className="dateDisplay" onClick={nextDay}>{dateString} · 第{weekNumber}周</span>
           </div>
           <p className="intro">夜猫子程序员，喜欢摩托、电脑、独处和下雨天。</p>
-          <div className="dayMeta">
-            <span className="badge"><span className="emoji">{weather==='sunny'?'☀️':weather==='rainy'?'🌧️':'🌿'}</span>{weather==='sunny'?'晴天':weather==='rainy'?'雨天':'苔雨'}</span>
-            {festival && <span className="badge"><span className="emoji">🎉</span>{festival}</span>}
+          <div className="dateInfo">
+            <span className="dateDisplay" onClick={nextDay}>
+              第{year}年·{SEASONS[seasonIndex]}季·{dayOfSeason}日·{WEEKDAYS[(dayOfSeason - 1) % 7]}·{weather==='sunny'?'晴天':weather==='rainy'?'雨天':'苔雨'}{festival ? `·${festival}` : ''}
+            </span>
           </div>
           <div className="friendship">
             <span className="label">好感：</span>
@@ -473,6 +568,7 @@ function App() {
                 return <img key={i} className={`heart${filled?' filled':''}`} src={filled?heartFull:heartEmpty} alt={filled?'♥':'♡'} />
               })}
             </div>
+            <button className="btn-details" onClick={()=>setLogOpen(true)}>详情</button>
           </div>
           <div className="progress">
             <span>对话 {dialogueGainedToday?1:0}/1</span>
@@ -505,18 +601,17 @@ function App() {
 
       <footer className="composer">
         <div className="actions">
-          <button className="btn icon-btn" onClick={()=>setEditorOpen(true)} title="对话编辑器">⚙️</button>
-          <button className="btn" onClick={()=>{ if (canGift()) setGiftOpen(true); else appendMessage('system','今天已送过礼物或本周送礼次数已满。') }}>送礼</button>
-          <button className="btn" onClick={()=>setLogOpen(true)}>好感度变化</button>
-          <button className="btn" onClick={()=>{ 
+          <button className="btn" onClick={()=>sebReply('hello')}>👋 打招呼</button>
+          <button className="btn" onClick={()=>{ if (canGift()) setGiftOpen(true); else appendMessage('system','今天已送过礼物或本周送礼次数已满。') }}>🎁 送礼</button>
+          <button className="btn btn-primary btn-end-day" onClick={()=>{ 
             nextDay() 
-          }}>结束今天去睡觉</button>
+          }}>😴 结束今天</button>
         </div>
       </footer>
 
       <div className={`sheet ${giftOpen?'open':''} ${giftOpen?'':'hidden'}`} role="dialog" aria-modal="true">
         <div className="sheetHeader">
-          <span>选择礼物（每天最多1个，星之果茶除外）</span>
+          <span>选择礼物（每天最多1个，每周最多2个，星之果茶无限制）</span>
           <button className="iconBtn" onClick={()=>setGiftOpen(false)}>✕</button>
         </div>
         <div className="giftGrid">
@@ -545,134 +640,165 @@ function App() {
           </div>
         </div>
       </div>
-      {/* Dialogue Editor */}
-      <div className={`modal ${editorOpen?'':'hidden'}`} role="dialog" aria-modal="true">
+
+      <div className={`modal ${knowledgeOpen?'':'hidden'}`} role="dialog" aria-modal="true">
         <div className="modalCard">
           <div className="modalHeader">
-            <h3>对话编辑器</h3>
-            <button className="iconBtn" onClick={()=>setEditorOpen(false)}>✕</button>
+            <h3>对384的了解程度</h3>
+            <button className="iconBtn" onClick={()=>setKnowledgeOpen(false)}>✕</button>
           </div>
           <div className="modalContent">
-            <div className="row" style={{gridTemplateColumns:'120px 120px 120px 1fr'}}>
-              <select value={draft.firstMeet} onChange={e=>setDraft({...draft, firstMeet:e.target.value})}>
-                <option value={'否'}>初次见面/否</option>
-                <option value={'是'}>初次见面/是</option>
-              </select>
-              <select value={draft.season} onChange={e=>setDraft({...draft, season:e.target.value})}>
-                <option value={'any'}>季节/不限</option>
-                <option value={'spring'}>季节/春</option>
-                <option value={'summer'}>季节/夏</option>
-                <option value={'fall'}>季节/秋</option>
-                <option value={'winter'}>季节/冬</option>
-              </select>
-              <select value={draft.weekday} onChange={e=>setDraft({...draft, weekday:e.target.value})}>
-                <option value={'any'}>星期/不限</option>
-                <option value={'mon'}>星期/星期一</option>
-                <option value={'tue'}>星期/星期二</option>
-                <option value={'wed'}>星期/星期三</option>
-                <option value={'thu'}>星期/星期四</option>
-                <option value={'fri'}>星期/星期五</option>
-                <option value={'sat'}>星期/星期六</option>
-                <option value={'sun'}>星期/星期日</option>
-              </select>
-              <select value={draft.trigger} onChange={e=>setDraft({...draft, trigger:e.target.value})}>
-                <option value={'hello'}>打招呼</option>
-                <option value={'weather'}>聊天气</option>
-                <option value={'work'}>问项目</option>
-              </select>
-              <input placeholder="塞巴斯台词（触发后）" value={draft.npcLine} onChange={e=>setDraft({...draft, npcLine:e.target.value})} />
-            </div>
-            <div className="row" style={{gridTemplateColumns:'repeat(5, 1fr)'}}>
-              <select value={draft.day} onChange={e=>setDraft({...draft, day:e.target.value})}>
-                <option value={'any'}>日期/不限</option>
-                {Array.from({length:28}).map((_,i)=> <option key={i+1} value={String(i+1)}>日期/{i+1}</option>)}
-              </select>
-              <select value={draft.heartsAtLeast} onChange={e=>setDraft({...draft, heartsAtLeast:Number(e.target.value)})}>
-                <option value={0}>好感/不限</option>
-                <option value={2}>好感/2心及以上</option>
-                <option value={4}>好感/4心及以上</option>
-                <option value={6}>好感/6心及以上</option>
-                <option value={8}>好感/8心及以上</option>
-                <option value={10}>好感/10心及以上</option>
-              </select>
-              <select value={draft.location} onChange={e=>setDraft({...draft, location:e.target.value})}>
-                <option value={'any'}>地点/不限</option>
-                <option value={'mountain'}>地点/山区</option>
-                <option value={'mountain-lake'}>地点/在山区的湖边</option>
-              </select>
-              <select value={draft.weather} onChange={e=>setDraft({...draft, weather:e.target.value})}>
-                <option value={'sunny'}>天气/晴天</option>
-                <option value={'rainy'}>天气/雨天</option>
-                <option value={'moss'}>天气/苔雨</option>
-              </select>
-              <select value={draft.marriage} onChange={e=>setDraft({...draft, marriage:e.target.value})}>
-                <option value={'any'}>婚姻/不限</option>
-                <option value={'engaged'}>婚姻/订婚后</option>
-                <option value={'divorced'}>婚姻/离婚后</option>
-                <option value={'married'}>婚姻/结婚后</option>
-              </select>
-            </div>
-            <div className="row" style={{gridTemplateColumns:'repeat(2, 1fr)'}}>
-              <select value={draft.yearParity} onChange={e=>setDraft({...draft, yearParity:e.target.value})}>
-                <option value={'any'}>年份/不限</option>
-                <option value={'odd'}>年份/奇数</option>
-                <option value={'even'}>年份/偶数</option>
-              </select>
-              <select value={draft.festival} onChange={e=>setDraft({...draft, festival:e.target.value})}>
-                <option value={'none'}>节日/非节日</option>
-                <option value={'egg'}>节日/复活节</option>
-                <option value={'desert'}>节日/沙漠节</option>
-                <option value={'flower'}>节日/花舞节</option>
-                <option value={'luau'}>节日/夏威夷宴会</option>
-                <option value={'jelly'}>节日/月光水母起舞</option>
-                <option value={'fair'}>节日/星露谷展览会</option>
-                <option value={'spirit'}>节日/万灵节</option>
-                <option value={'ice'}>节日/冰雪节</option>
-                <option value={'nightmarket'}>节日/夜市</option>
-                <option value={'feast'}>节日/冬日盛宴</option>
-              </select>
-            </div>
-            <div className="row" style={{gridTemplateColumns:'1fr'}}>
-              <div className="opts">
-                {draft.options?.map((o,idx)=> (
-                  <span key={idx} className="pill">
-                    {o.label}
-                    <span style={{color:o.delta>=0?'#7dd3a7':'#f59aa9'}}>{o.delta>0?`+${o.delta}`:o.delta}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="row" style={{gridTemplateColumns:'140px 1fr 80px 1fr'}}>
-              <input placeholder="按钮文案" value={draftOpt.label} onChange={e=>setDraftOpt({...draftOpt, label:e.target.value})} />
-              <input placeholder="玩家台词" value={draftOpt.playerText} onChange={e=>setDraftOpt({...draftOpt, playerText:e.target.value})} />
-              <input placeholder="好感变化" type="number" value={draftOpt.delta} onChange={e=>setDraftOpt({...draftOpt, delta:Number(e.target.value)})} />
-              <input placeholder="塞巴斯回应" value={draftOpt.sebResponse} onChange={e=>setDraftOpt({...draftOpt, sebResponse:e.target.value})} />
-            </div>
-            <div className="row" style={{gridTemplateColumns:'1fr 1fr'}}>
-              <button className="btn" onClick={()=>{
-                setDraft({...draft, options:[...(draft.options||[]), {...draftOpt}]})
-                setDraftOpt({ label:'', playerText:'', delta:0, sebResponse:'' })
-              }}>添加选项</button>
-              <button className="btn primary" onClick={()=>{
-                setDialogues(prev=>[...prev, {...draft}])
-                setDraft({ firstMeet:'否', season:'any', weekday:'any', day:'any', heartsAtLeast:0, location:'any', weather:'sunny', marriage:'any', yearParity:'any', festival:'none', trigger:'hello', npcLine:'', options:[] })
-                showToast('已添加对话')
-              }}>保存对话</button>
-            </div>
-            <div style={{marginTop:8}}>
-              {dialogues.map((d,i)=> (
-                <div key={i} className="row" style={{gridTemplateColumns:'1fr'}}>
-                  <div style={{fontSize:12,color:'#9fb3c8'}}>
-                    条件：{d.firstMeet==='是'?'初见/是':'初见/否'} / {d.season==='any'?'季节/不限':d.season} / {d.weekday==='any'?'星期/不限':d.weekday} / {d.day==='any'?'日期/不限':`日期/${d.day}`} / 好感≥{d.heartsAtLeast||0}心 / {d.location==='any'?'地点/不限':d.location} / {d.weather==='moss'?'苔雨':d.weather==='rainy'?'雨天':'晴天'} / {d.marriage==='any'?'婚姻/不限':d.marriage} / {d.yearParity==='any'?'年份/不限':d.yearParity} / {d.festival==='none'?'非节日':`节日/${d.festival}`} · 触发：{d.trigger}
-                  </div>
-                  <div style={{marginTop:6}}>{d.npcLine}</div>
-                  <div className="opts" style={{marginTop:6}}>
-                    {d.options.map((o,idx)=> (
-                      <span key={idx} className="pill">{o.label}<span style={{color:o.delta>=0?'#7dd3a7':'#f59aa9'}}>{o.delta>0?`+${o.delta}`:o.delta}</span></span>
-                    ))}
+            <div style={{padding:'12px 0'}}>
+              <div style={{display:'flex', alignItems:'center', gap:'16px', marginBottom:'20px', padding:'16px', backgroundColor:'#1c2833', borderRadius:'8px'}}>
+                <div className="circular-progress-large">
+                  <svg className="progress-ring" width="60" height="60">
+                    <circle
+                      className="progress-ring-circle-bg"
+                      stroke="#1c2833"
+                      strokeWidth="4"
+                      fill="transparent"
+                      r="26"
+                      cx="30"
+                      cy="30"
+                    />
+                    <circle
+                      className="progress-ring-circle"
+                      stroke="#4ade80"
+                      strokeWidth="4"
+                      fill="transparent"
+                      r="26"
+                      cx="30"
+                      cy="30"
+                      style={{
+                        strokeDasharray: `${2 * Math.PI * 26}`,
+                        strokeDashoffset: `${2 * Math.PI * 26 * (1 - knowledgeProgress / 100)}`
+                      }}
+                    />
+                  </svg>
+                  <span className="progress-text-large">{knowledgeProgress}%</span>
+                </div>
+                <div>
+                  <div style={{color:'#a0c7ff', fontSize:'18px', fontWeight:'bold'}}>了解程度</div>
+                  <div style={{color:'#c7d2de', fontSize:'14px'}}>已收集 {triggeredCount}/{totalReplies} 种回复</div>
+                  <div style={{width:'200px', height:'8px', backgroundColor:'#1c2833', borderRadius:'4px', marginTop:'8px', overflow:'hidden'}}>
+                    <div style={{
+                      width:`${knowledgeProgress}%`,
+                      height:'100%',
+                      backgroundColor:'#4ade80',
+                      transition:'width 0.3s ease'
+                    }}></div>
                   </div>
                 </div>
-              ))}
+              </div>
+              <h4 style={{color:'#a0c7ff', marginBottom:'12px'}}>对话回复</h4>
+              <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
+                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <span style={{color: triggeredReplies.has('first-greeting-1') ? '#4ade80' : '#6b7280'}}>
+                    {triggeredReplies.has('first-greeting-1') ? '✓' : '○'}
+                  </span>
+                  <span style={{color:'#c7d2de'}}>初次见面第一句："噢。你是刚搬进来的，对吧？"</span>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <span style={{color: triggeredReplies.has('first-greeting-2') ? '#4ade80' : '#6b7280'}}>
+                    {triggeredReplies.has('first-greeting-2') ? '✓' : '○'}
+                  </span>
+                  <span style={{color:'#c7d2de'}}>初次见面第二句："好啊。那么多地方你不选，偏偏选中了鹈鹕镇？"</span>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <span style={{color: triggeredReplies.has('regular-greeting') ? '#4ade80' : '#6b7280'}}>
+                    {triggeredReplies.has('regular-greeting') ? '✓' : '○'}
+                  </span>
+                  <span style={{color:'#c7d2de'}}>日常打招呼："哦，嗨。今天在忙农场吗？"</span>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <span style={{color: triggeredReplies.has('weather-talk') ? '#4ade80' : '#6b7280'}}>
+                    {triggeredReplies.has('weather-talk') ? '✓' : '○'}
+                  </span>
+                  <span style={{color:'#c7d2de'}}>聊天气："下雨天更有灵感。我喜欢雨声敲窗的感觉。"</span>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <span style={{color: triggeredReplies.has('work-talk') ? '#4ade80' : '#6b7280'}}>
+                    {triggeredReplies.has('work-talk') ? '✓' : '○'}
+                  </span>
+                  <span style={{color:'#c7d2de'}}>聊项目："我在修个小工具。等它能跑起来再给你看。"</span>
+                </div>
+              </div>
+              
+              <h4 style={{color:'#a0c7ff', marginTop:'20px', marginBottom:'12px'}}>礼物回复</h4>
+              <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
+                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <span style={{color: triggeredReplies.has('gift-void-egg') ? '#4ade80' : '#6b7280'}}>
+                    {triggeredReplies.has('gift-void-egg') ? '✓' : '○'}
+                  </span>
+                  <span style={{color:'#c7d2de'}}>虚空蛋专属回复</span>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <span style={{color: triggeredReplies.has('gift-obsidian') ? '#4ade80' : '#6b7280'}}>
+                    {triggeredReplies.has('gift-obsidian') ? '✓' : '○'}
+                  </span>
+                  <span style={{color:'#c7d2de'}}>黑曜石专属回复</span>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <span style={{color: triggeredReplies.has('gift-pumpkin-soup') ? '#4ade80' : '#6b7280'}}>
+                    {triggeredReplies.has('gift-pumpkin-soup') ? '✓' : '○'}
+                  </span>
+                  <span style={{color:'#c7d2de'}}>南瓜汤专属回复</span>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <span style={{color: triggeredReplies.has('gift-sashimi') ? '#4ade80' : '#6b7280'}}>
+                    {triggeredReplies.has('gift-sashimi') ? '✓' : '○'}
+                  </span>
+                  <span style={{color:'#c7d2de'}}>生鱼片专属回复</span>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <span style={{color: triggeredReplies.has('gift-frozen-tear') ? '#4ade80' : '#6b7280'}}>
+                    {triggeredReplies.has('gift-frozen-tear') ? '✓' : '○'}
+                  </span>
+                  <span style={{color:'#c7d2de'}}>泪晶专属回复</span>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <span style={{color: triggeredReplies.has('gift-frog-egg') ? '#4ade80' : '#6b7280'}}>
+                    {triggeredReplies.has('gift-frog-egg') ? '✓' : '○'}
+                  </span>
+                  <span style={{color:'#c7d2de'}}>青蛙蛋专属回复</span>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <span style={{color: triggeredReplies.has('gift-stardrop-tea') ? '#4ade80' : '#6b7280'}}>
+                    {triggeredReplies.has('gift-stardrop-tea') ? '✓' : '○'}
+                  </span>
+                  <span style={{color:'#c7d2de'}}>星之果茶专属回复</span>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <span style={{color: triggeredReplies.has('gift-favorite-general') ? '#4ade80' : '#6b7280'}}>
+                    {triggeredReplies.has('gift-favorite-general') ? '✓' : '○'}
+                  </span>
+                  <span style={{color:'#c7d2de'}}>最爱礼物通用回复</span>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <span style={{color: triggeredReplies.has('gift-like') ? '#4ade80' : '#6b7280'}}>
+                    {triggeredReplies.has('gift-like') ? '✓' : '○'}
+                  </span>
+                  <span style={{color:'#c7d2de'}}>喜欢礼物回复</span>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <span style={{color: triggeredReplies.has('gift-neutral') ? '#4ade80' : '#6b7280'}}>
+                    {triggeredReplies.has('gift-neutral') ? '✓' : '○'}
+                  </span>
+                  <span style={{color:'#c7d2de'}}>一般礼物回复</span>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <span style={{color: triggeredReplies.has('gift-dislike') ? '#4ade80' : '#6b7280'}}>
+                    {triggeredReplies.has('gift-dislike') ? '✓' : '○'}
+                  </span>
+                  <span style={{color:'#c7d2de'}}>不喜欢礼物回复</span>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                  <span style={{color: triggeredReplies.has('gift-hate') ? '#4ade80' : '#6b7280'}}>
+                    {triggeredReplies.has('gift-hate') ? '✓' : '○'}
+                  </span>
+                  <span style={{color:'#c7d2de'}}>讨厌礼物回复</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
