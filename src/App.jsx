@@ -5,7 +5,7 @@ const SEASONS = ["春", "夏", "秋", "冬"]
 const WEEKDAYS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 
 const heartEmpty = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><path fill='%23aa5a67' fill-opacity='0.3' d='M8 14s-6-3.33-6-8a3.5 3.5 0 0 1 6-2.44A3.5 3.5 0 0 1 14 6c0 4.67-6 8-6 8z'/></svg>"
-const heartFull = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><path fill='%23626285' d='M8 14s-6-3.33-6-8a3.5 3.5 0 0 1 6-2.44A3.5 3.5 0 0 1 14 6c0 4.67-6 8-6 8z'/></svg>".replace('#626285','#FF6285').replace('%23FF6285','%23FF6285')
+const heartFull = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><path fill='%23DF0000' d='M8 14s-6-3.33-6-8a3.5 3.5 0 0 1 6-2.44A3.5 3.5 0 0 1 14 6c0 4.67-6 8-6 8z'/></svg>"
 
 // Sebastian images - different for header and chat
 const sebHeaderAvatar = '/Sebastian-header.png'  // 顶部大头像
@@ -94,6 +94,24 @@ function getRandomGifts() {
 function formatDate(state){
   const dayIndexZeroBased = (state.dayOfSeason - 1) % 7
   return `Y${state.year} · ${SEASONS[state.seasonIndex]} · 第${state.dayOfSeason}天 · ${WEEKDAYS[dayIndexZeroBased]}`
+}
+
+function getWeatherIcon(weather) {
+  switch(weather) {
+    case 'sunny': return '☀️'
+    case 'rainy': return '🌧️'
+    case 'moss': return '🌫️'
+    default: return '☀️'
+  }
+}
+
+function getWeatherText(weather) {
+  switch(weather) {
+    case 'sunny': return '晴天'
+    case 'rainy': return '雨天'
+    case 'moss': return '苔雨'
+    default: return '晴天'
+  }
 }
 
 function computeHearts(points){
@@ -517,65 +535,67 @@ function App() {
   return (
     <div className="app">
       <header className="topHeader">
+      <div className="header-section-1">
       <div>
           <img className="avatarLarge" src={sebHeaderAvatar} alt="Sebastian" onError={e => e.target.src = fallbackSeb} />
-          <button className="knowledge-btn-header" onClick={()=>setKnowledgeOpen(true)}>
-            <div className="circular-progress">
-              <svg className="progress-ring" width="24" height="24">
-                <circle
-                  className="progress-ring-circle-bg"
-                  stroke="#1c2833"
-                  strokeWidth="2"
-                  fill="transparent"
-                  r="10"
-                  cx="12"
-                  cy="12"
-                />
-                <circle
-                  className="progress-ring-circle"
-                  stroke="#4ade80"
-                  strokeWidth="2"
-                  fill="transparent"
-                  r="10"
-                  cx="12"
-                  cy="12"
-                  style={{
-                    strokeDasharray: `${2 * Math.PI * 10}`,
-                    strokeDashoffset: `${2 * Math.PI * 10 * (1 - knowledgeProgress / 100)}`
-                  }}
-                />
-              </svg>
-              <span className="progress-text">{knowledgeProgress}%</span>
-            </div>
-          </button>
         </div>
         <div style={{flex:1}}>
           <div className="nameRow">
             <h1 className="name">塞巴斯提安</h1>
+            <button className="knowledge-btn-header" onClick={()=>setKnowledgeOpen(true)}>
+              <div className="circular-progress">
+                <svg className="progress-ring" width="24" height="24">
+                  <circle
+                    className="progress-ring-circle-bg"
+                    stroke="#1c2833"
+                    strokeWidth="2"
+                    fill="transparent"
+                    r="10"
+                    cx="12"
+                    cy="12"
+                  />
+                  <circle
+                    className="progress-ring-circle"
+                    stroke="#4ade80"
+                    strokeWidth="2"
+                    fill="transparent"
+                    r="10"
+                    cx="12"
+                    cy="12"
+                    style={{
+                      strokeDasharray: `${2 * Math.PI * 10}`,
+                      strokeDashoffset: `${2 * Math.PI * 10 * (1 - knowledgeProgress / 100)}`
+                    }}
+                  />
+                </svg>
+                <span className="progress-text">{knowledgeProgress}%</span>
+              </div>
+            </button>
           </div>
           <p className="intro">夜猫子程序员，喜欢摩托、电脑、独处和下雨天。</p>
           <div className="dateInfo">
-            <span className="dateDisplay" onClick={nextDay}>
-              第{year}年·{SEASONS[seasonIndex]}季·{dayOfSeason}日·{WEEKDAYS[(dayOfSeason - 1) % 7]}·{weather==='sunny'?'晴天':weather==='rainy'?'雨天':'苔雨'}{festival ? `·${festival}` : ''}
+            <span className="dateDisplay dateDisplay-left">
+              第{year}年·{SEASONS[seasonIndex]}季·{dayOfSeason}日·{WEEKDAYS[(dayOfSeason - 1) % 7]}·{getWeatherIcon(weather)}{getWeatherText(weather)}{festival ? `·${festival}` : ''}
             </span>
           </div>
-          <div className="friendship">
-            <span className="label">好感：</span>
-            <span className="points">{friendshipPoints}/2500</span>
-            <div className="hearts">
-              {Array.from({length:10}).map((_,i)=>{
-                const filled = i < hearts
-                return <img key={i} className={`heart${filled?' filled':''}`} src={filled?heartFull:heartEmpty} alt={filled?'♥':'♡'} />
-              })}
-            </div>
-            <button className="btn-details" onClick={()=>setLogOpen(true)}>详情</button>
+        </div>
+      </div>
+      
+      <div className="header-section-2">
+        <div className="friendship-below-avatar">
+          <div className="friendship-info">
+            <span className="label">好感度：</span>
+            <span className="progress-info">{friendshipPoints}/2500</span>
           </div>
-          <div className="progress">
-            <span>对话 {dialogueGainedToday?1:0}/1</span>
-            <span className="dot">•</span>
-            <span>送礼 {giftsGivenToday}/1 (本周{giftsGivenThisWeek}/2)</span>
+          <div className="hearts">
+            {Array.from({length:10}).map((_,i)=>{
+              const filled = i < hearts
+              return <img key={i} className={`heart${filled?' filled':''}`} src={filled?heartFull:heartEmpty} alt={filled?'♥':'♡'} />
+            })}
           </div>
         </div>
+        <button className="btn-details-text" onClick={()=>setLogOpen(true)}>详情&gt;</button>
+      </div>
       </header>
 
       <main className="content" ref={contentRef}>
@@ -599,9 +619,27 @@ function App() {
         </section>
       </main>
 
+      <div className="progress-summary">
+        <span className="progress-info">对话 {dialogueGainedToday?1:0}/1</span>
+        <span className="dot">•</span>
+        <span className="progress-info">送礼 {giftsGivenToday}/1 (本周{giftsGivenThisWeek}/2)</span>
+      </div>
+      
       <footer className="composer">
         <div className="actions">
-          <button className="btn" onClick={()=>sebReply('hello')}>👋 打招呼</button>
+          <button 
+            className={`btn ${dialogueGainedToday ? 'disabled' : ''}`} 
+            disabled={dialogueGainedToday}
+            onClick={()=>{
+              if (dialogueGainedToday) {
+                appendMessage('system', '今天已经打过招呼了')
+              } else {
+                sebReply('hello')
+              }
+            }}
+          >
+            👋 打招呼
+          </button>
           <button className="btn" onClick={()=>{ if (canGift()) setGiftOpen(true); else appendMessage('system','今天已送过礼物或本周送礼次数已满。') }}>🎁 送礼</button>
           <button className="btn btn-primary btn-end-day" onClick={()=>{ 
             nextDay() 
@@ -619,7 +657,7 @@ function App() {
             <button key={g.id} className="gift" onClick={()=>giveGift(g)}>
               <img src={`/gifts/${g.id}.png`} alt={g.name} onError={(e)=>{e.target.style.display='none'}} />
               <span>{g.name}</span>
-            </button>
+        </button>
           ))}
         </div>
       </div>
@@ -644,7 +682,7 @@ function App() {
       <div className={`modal ${knowledgeOpen?'':'hidden'}`} role="dialog" aria-modal="true">
         <div className="modalCard">
           <div className="modalHeader">
-            <h3>对384的了解程度</h3>
+            <h3>对话触发进度</h3>
             <button className="iconBtn" onClick={()=>setKnowledgeOpen(false)}>✕</button>
           </div>
           <div className="modalContent">
